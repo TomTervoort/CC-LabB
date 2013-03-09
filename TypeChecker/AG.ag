@@ -1,0 +1,53 @@
+include "CCO/Diag/AG/Base.ag"
+
+imports
+{
+import Control.Monad
+
+import CCO.Component
+import CCO.Feedback
+import CCO.Printing
+}
+
+
+-------------------
+-- Haskell logic --
+-------------------
+
+{
+-- | Typechecks a diagram within the feedback monad. Produces an error in case of a type error and
+--   returns when the diagram is well-typed.
+typeCheck :: Diag -> Feedback ()
+typeCheck d = feedback_Syn_Diag $ wrap_Diag (sem_Diag d) inherited
+ where inherited = Inh_Diag {}
+
+-- | The type check operation as a component. 
+typeCheckComponent :: Component Diag ()
+typeCheckComponent = component typeCheck 
+
+-- | Notes a type error within the Feedback monad. Is provided with a description of the error.
+typeError :: String -> Feedback a
+typeError msg = errorMessage $ text $ "Error: " ++ msg
+
+-- | Yields a typeError only if a certain condition is True.
+errorIf :: Bool -> String -> Feedback ()
+errorIf c msg = when c $ typeError msg
+
+type VoidFeedback = Feedback ()
+
+}
+
+
+------------------------------
+-- Attributes and semantics --
+------------------------------
+
+attr Diag Diag_
+ syn feedback use {>>} {return ()} :: VoidFeedback
+ syn isPlatform use {(\_ _ -> False)} {False} :: Bool
+
+sem Diag_
+ | Platform   lhs.isPlatform = True
+ | Execute    lhs.feedback = errorIf @d1.isPlatform "Trying to execute a platform."
+                            
+
