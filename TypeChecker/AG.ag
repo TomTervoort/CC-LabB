@@ -35,15 +35,6 @@ errorIf c msg = when c $ typeError msg
 
 type VoidFeedback = Feedback ()
 
--- | Tests whether the second argument is the platorm named by the first argument or an interpreter
---   that runs on this platform.
-{-- matchPlatform :: Ident -> Diag -> Feedback ()
-matchPlatform p (Diag _ d') = 
- case d' of
-  Platform p' -> errorIf (p /= p') $ "Platform mismatch: " ++ show p ++ " <-> " ++ show p' ++ "."
-  i@(Interpreter _ _ p') -> errorIf (p /= p') $ "Can not run on " ++ show p ++ ": " ++ show i ++ "."
-  x -> typeError $ "Not a platform or interpreter: " ++ show x ++ "." --}
-
 -- | Returns its first argument. Useful when specifying a default binary operator for synthesising 
 --   that should throw away its operands in case they are combined.
 const2 :: a -> b -> c -> a
