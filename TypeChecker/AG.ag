@@ -80,6 +80,9 @@ attr Diag Diag_
  -- Nothing.
  syn compiles use {const2 Nothing} {Nothing} :: (Maybe Ident)
 
+ -- A compiler sets this to the target language.
+ syn targetLanguage use {const2 Nothing} {Nothing} :: (Maybe Ident)
+
  -- String representation of a diagram that can be included in error messages.
  syn stringRep :: String
  
@@ -98,18 +101,22 @@ sem Diag_
 
  | Compiler     lhs.languageOrPlatform = Just @m
                 lhs.compiles = Just @l1
+                lhs.targetLanguage = Just @l2
                 lhs.stringRep = "compiler " ++ @c ++ " from " ++ @l1 ++ " to " ++ @l2 ++ " in "
                                             ++ @m
 
  | Execute      lhs.feedback = do errorIf @d1.isPlatform "Trying to execute a platform."
                                   errorIf (not $ justEq @d2.runs @d1.languageOrPlatform)
-                                   $ "Can not execute " ++ @d1.stringRep ++ "."
-                lhs.stringRep = "execute " ++ @d1.stringRep ++ " on " ++ @d2.stringRep ++ " end"
+                                   $ "Can not execute " ++ show @d1.stringRep ++ " on " 
+                                      ++ show @d2.stringRep
+                lhs.stringRep = "execute " ++ show @d1.stringRep ++ " on " ++ show @d2.stringRep 
+                                           ++ " end"
 
- | Compile      lhs.languageOrPlatform = @d2.languageOrPlatform
+ | Compile      lhs.languageOrPlatform = @d2.targetLanguage
                 lhs.feedback = do errorIf @d1.isPlatform "Trying to compile a platform."
                                   errorIf (not $ justEq @d2.compiles @d1.languageOrPlatform) 
-                                     $ @d2.stringRep ++ " does not compile " ++ @d1.stringRep ++ "."
+                                     $ show @d2.stringRep ++ " does not compile " 
+                                        ++ show @d1.stringRep ++ "."
                 lhs.stringRep = "compile " ++ @d1.stringRep ++ " with " ++ @d2.stringRep ++ " end"
 
 

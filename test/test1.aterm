@@ -1,0 +1,4 @@
+Diag(
+  SourcePos(Stdin, Pos(1, 1))
+, Interpreter("hugs", "Haskell", "i686-windows")
+)
