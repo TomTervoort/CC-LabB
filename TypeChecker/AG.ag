@@ -35,6 +35,25 @@ errorIf c msg = when c $ typeError msg
 
 type VoidFeedback = Feedback ()
 
+-- | Tests whether the second argument is the platorm named by the first argument or an interpreter
+--   that runs on this platform.
+{-- matchPlatform :: Ident -> Diag -> Feedback ()
+matchPlatform p (Diag _ d') = 
+ case d' of
+  Platform p' -> errorIf (p /= p') $ "Platform mismatch: " ++ show p ++ " <-> " ++ show p' ++ "."
+  i@(Interpreter _ _ p') -> errorIf (p /= p') $ "Can not run on " ++ show p ++ ": " ++ show i ++ "."
+  x -> typeError $ "Not a platform or interpreter: " ++ show x ++ "." --}
+
+-- | Returns its first argument. Useful when specifying a default binary operator for synthesising 
+--   that should throw away its operands in case they are combined.
+const2 :: a -> b -> c -> a
+const2 x _ _ = x
+
+-- | Returns True if and only if both arguments are not Nothing and equal to each other.
+justEq :: Eq a => Maybe a -> Maybe a -> Bool
+justEq (Just a) (Just b) = a == b
+justEq _ _ = False
+
 }
 
 
@@ -43,11 +62,56 @@ type VoidFeedback = Feedback ()
 ------------------------------
 
 attr Diag Diag_
+ -- Any errors are encoded in here.
  syn feedback use {>>} {return ()} :: VoidFeedback
- syn isPlatform use {(\_ _ -> False)} {False} :: Bool
+ 
+ -- True if and only if a diagram represents a platform.
+ syn isPlatform use {const2 False} {False} :: Bool
+ 
+ -- If an executable program (such as a compiler or interpreter) is written in a particular 
+ -- language or can run on a certain platform, this holds the name of that language or platform.
+ syn languageOrPlatform use {const2 Nothing} {Nothing} :: (Maybe Ident)
+
+ -- Not Nothing in case this diagram is a platform with a certain name or an interpreter that can
+ -- run a language with this name.
+ syn runs use {const2 Nothing} {Nothing} :: (Maybe Ident)
+
+ -- If a compiler, this holds the name of the language that can be compiled by it. Otherwise this is
+ -- Nothing.
+ syn compiles use {const2 Nothing} {Nothing} :: (Maybe Ident)
+
+ -- String representation of a diagram that can be included in error messages.
+ syn stringRep :: String
+ 
 
 sem Diag_
- | Platform   lhs.isPlatform = True
- | Execute    lhs.feedback = errorIf @d1.isPlatform "Trying to execute a platform."
-                            
+ | Program      lhs.languageOrPlatform = Just @l
+                lhs.stringRep = "program " ++ @p ++ " in " ++ @l
+
+ | Platform     lhs.isPlatform = True
+                lhs.runs = Just @m
+                lhs.stringRep = "platform " ++ @m
+
+ | Interpreter  lhs.languageOrPlatform = Just @m
+                lhs.runs = Just @l
+                lhs.stringRep = "interpreter " ++ @i ++ " for " ++ @l ++ " in " ++ @m
+
+ | Compiler     lhs.languageOrPlatform = Just @m
+                lhs.compiles = Just @l1
+                lhs.stringRep = "compiler " ++ @c ++ " from " ++ @l1 ++ " to " ++ @l2 ++ " in "
+                                            ++ @m
+
+ | Execute      lhs.feedback = do errorIf @d1.isPlatform "Trying to execute a platform."
+                                  errorIf (not $ justEq @d2.runs @d1.languageOrPlatform)
+                                   $ "Can not execute " ++ @d1.stringRep ++ "."
+                lhs.stringRep = "execute " ++ @d1.stringRep ++ " on " ++ @d2.stringRep ++ " end"
+
+ | Compile      lhs.languageOrPlatform = @d2.languageOrPlatform
+                lhs.feedback = do errorIf @d1.isPlatform "Trying to compile a platform."
+                                  errorIf (not $ justEq @d2.compiles @d1.languageOrPlatform) 
+                                     $ @d2.stringRep ++ " does not compile " ++ @d1.stringRep ++ "."
+                lhs.stringRep = "compile " ++ @d1.stringRep ++ " with " ++ @d2.stringRep ++ " end"
+
+
+                                
 
